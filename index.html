@@ -416,7 +416,7 @@
             const response = await fetch(`${apiBaseUrl}/channels/${channel_id}`, {
                 method: 'GET',
                 headers: {
-                    'Content-Type': 'application/json',
+                    'Content-Type': 'application/json', 
                     'Authorization': 'Bearer ' + localStorage.getItem('access_token')
                 }
             });
