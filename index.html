@@ -150,12 +150,41 @@
                                 <th scope="col" class="px-6 py-4">Channel Name</th>
                                 <th scope="col" class="px-6 py-4">Key Hint</th>
                                 <th scope="col" class="px-6 py-4">วันที่สร้าง</th>
+                                <th scope="col" class="px-6 py-4">จัดการ</th>
                             </tr>
                         </thead>
                         <tbody id="apiKeysTableBody">
                             <!-- Data will be inserted here -->
                         </tbody>
                     </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div id="deleteModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-gray-900 bg-opacity-50 dark:bg-opacity-80">
+        <div class="relative p-4 w-full max-w-md">
+            <div class="relative bg-white rounded-lg shadow dark:bg-gray-700">
+                <button type="button" onclick="hideDeleteModal()" class="absolute top-3 end-2.5 text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm w-8 h-8 ms-auto inline-flex justify-center items-center dark:hover:bg-gray-600 dark:hover:text-white">
+                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+                <div class="p-6 text-center">
+                    <svg class="mx-auto mb-4 text-red-500 w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                    </svg>
+                    <h3 class="mb-5 text-lg font-normal text-gray-500 dark:text-gray-400">คุณต้องการลบ API Key นี้ใช่หรือไม่?</h3>
+                    <p id="deleteKeyName" class="mb-5 text-sm text-gray-400 dark:text-gray-500"></p>
+                    <button id="confirmDeleteBtn" type="button" class="text-white bg-red-600 hover:bg-red-800 focus:ring-4 focus:outline-none focus:ring-red-300 dark:focus:ring-red-800 font-medium rounded-lg text-sm inline-flex items-center px-5 py-2.5 text-center me-2">
+                        <span id="deleteBtnText">ใช่, ลบเลย</span>
+                        <svg id="deleteSpinner" class="hidden animate-spin w-4 h-4 ml-2" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                    </button>
+                    <button onclick="hideDeleteModal()" type="button" class="text-gray-500 bg-white hover:bg-gray-100 focus:ring-4 focus:outline-none focus:ring-gray-200 rounded-lg border border-gray-200 text-sm font-medium px-5 py-2.5 hover:text-gray-900 focus:z-10 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-500 dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-gray-600">ยกเลิก</button>
                 </div>
             </div>
         </div>
@@ -333,15 +362,17 @@
                         <td class="px-6 py-4">
                             <div class="flex items-center space-x-2">
                                 <code class="bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded text-xs font-mono">${key.key_hint || '-'}</code>
-                                <button onclick="copyToClipboard('${key.key_hint || ''}')" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
-                                    </svg>
-                                </button>
                             </div>
                         </td>
                         <td class="px-6 py-4">
                             ${formatDate(key.created_at)}
+                        </td>
+                        <td class="px-6 py-4">
+                            <button onclick="showDeleteModal('${key.key_id}', '${key.name || 'Unnamed Key'}')" class="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300" title="ลบ API Key">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                                </svg>
+                            </button>
                         </td>
                     </tr>
                 `;
@@ -426,6 +457,72 @@
             }
             
             return await response.json();
+        }
+
+        // Delete API Key functionality
+        let currentDeleteKeyId = null;
+
+        function showDeleteModal(keyId, keyName) {
+            currentDeleteKeyId = keyId;
+            document.getElementById('deleteKeyName').textContent = `API Key: ${keyName}`;
+            document.getElementById('deleteModal').classList.remove('hidden');
+            
+            // Set up confirm button click handler
+            document.getElementById('confirmDeleteBtn').onclick = () => confirmDeleteApiKey();
+        }
+
+        function hideDeleteModal() {
+            document.getElementById('deleteModal').classList.add('hidden');
+            currentDeleteKeyId = null;
+            // Reset button state
+            document.getElementById('deleteBtnText').textContent = 'ใช่, ลบเลย';
+            document.getElementById('deleteSpinner').classList.add('hidden');
+            document.getElementById('confirmDeleteBtn').disabled = false;
+        }
+
+        async function confirmDeleteApiKey() {
+            if (!currentDeleteKeyId) return;
+            
+            const deleteBtn = document.getElementById('confirmDeleteBtn');
+            const deleteBtnText = document.getElementById('deleteBtnText');
+            const deleteSpinner = document.getElementById('deleteSpinner');
+            
+            // Show loading state
+            deleteBtn.disabled = true;
+            deleteBtnText.textContent = 'กำลังลบ...';
+            deleteSpinner.classList.remove('hidden');
+            
+            try {
+                const response = await revokeApiKey(currentDeleteKeyId);
+                
+                if (response.ok) {
+                    hideDeleteModal();
+                    showToast('success', 'ลบ API Key สำเร็จ!');
+                    loadApiKeys(); // Reload the list
+                } else {
+                    const errorData = await response.json().catch(() => ({}));
+                    showToast('error', errorData.detail || 'ไม่สามารถลบ API Key ได้');
+                    hideDeleteModal();
+                }
+            } catch (error) {
+                console.error('Error deleting API key:', error);
+                showToast('error', 'เกิดข้อผิดพลาดในการลบ API Key');
+                hideDeleteModal();
+            }
+        }
+
+        async function revokeApiKey(keyId) {
+            const response = await fetch(`${apiBaseUrl}/auth/api-keys/revoke`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + localStorage.getItem('access_token')
+                },
+                body: JSON.stringify({
+                    key_id: keyId
+                })
+            });
+            return response;
         }
     </script>
 
